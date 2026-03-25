@@ -15,18 +15,20 @@ class ProfileScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 40),
           children: [
-            _buildTopBar(),
+            _buildTopBar(context),
             _buildProfileHeader(),
             _buildStatsRow(),
+            _buildQuickLinks(context),
             _buildTagsSection(),
-            _buildUpcomingSection(),
+            _buildMyEventsSection(context),
+            _buildConnectionsSection(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
@@ -57,7 +59,11 @@ class ProfileScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: Colors.grey.shade600,
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings coming soon')),
+              );
+            },
           ),
         ],
       ),
@@ -161,7 +167,7 @@ class ProfileScreen extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.edit_outlined, color: Colors.grey.shade500),
             onPressed: () {
-              // TODO: profile edit
+              // Handled by caller to show feedback
             },
           ),
         ],
@@ -225,6 +231,78 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickLinks(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _quickLinkCard(
+              label: 'My Events',
+              icon: Icons.event_available_outlined,
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('My Events coming soon')),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _quickLinkCard(
+              label: 'Connections',
+              icon: Icons.people_outline,
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Connections coming soon')),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickLinkCard({
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.12)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF2563EB)),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF111827),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTagsSection() {
     final tags = ['Live Music', 'Outdoors', 'Food', 'Community'];
 
@@ -271,19 +349,20 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUpcomingSection() {
+  Widget _buildMyEventsSection(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'My Events',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF111827),
-            ),
+          _sectionHeader(
+            context,
+            title: 'My Events',
+            onMore: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('My Events coming soon')),
+              );
+            },
           ),
           const SizedBox(height: 12),
           Container(
@@ -318,6 +397,94 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildConnectionsSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeader(
+            context,
+            title: 'Connections',
+            onMore: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Connections coming soon')),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF2563EB).withOpacity(0.12),
+                  ),
+                  child: const Icon(Icons.person, color: Color(0xFF2563EB)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Connect with people you meet at events',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(
+    BuildContext context, {
+    required String title,
+    required VoidCallback onMore,
+  }) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const Spacer(),
+        TextButton(
+          onPressed: onMore,
+          child: const Text(
+            'More',
+            style: TextStyle(
+              color: Color(0xFF2563EB),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

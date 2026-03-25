@@ -9,6 +9,7 @@ import '../models/event.dart';
 import '../providers/event_providers.dart';
 import '../widgets/event_card.dart';
 import 'event_detail_screen.dart';
+import '../main.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -44,7 +45,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       const SizedBox(height: 8),
                       Expanded(
                         child: filteredEvents.isEmpty
-                            ? _buildEmptyState()
+                            ? SingleChildScrollView(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildEmptyState(),
+                              )
                             : _buildEventList(filteredEvents),
                       ),
                     ],
@@ -306,7 +310,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                // TODO: switch tabs when wiring tab controller
+                MainNavigation.of(context)?.setTab(0);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),

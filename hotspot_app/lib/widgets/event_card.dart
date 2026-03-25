@@ -181,7 +181,7 @@ class EventCard extends ConsumerWidget {
                       ],
                       const Spacer(),
                       GestureDetector(
-                        onTap: () => _toggleSave(ref),
+                        onTap: () => _toggleSave(ref, context),
                         child: Icon(
                           event.isSaved ? Icons.star : Icons.star_border,
                           color: event.isSaved
@@ -191,7 +191,15 @@ class EventCard extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Icon(Icons.ios_share, color: Colors.grey.shade400, size: 20),
+                      GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Share coming soon')),
+                          );
+                        },
+                        child: Icon(Icons.ios_share,
+                            color: Colors.grey.shade400, size: 20),
+                      ),
                       const SizedBox(width: 12),
                       if (showRsvpButton)
                         GestureDetector(
@@ -229,8 +237,15 @@ class EventCard extends ConsumerWidget {
     ref.read(eventRepositoryProvider).updateRsvp(event.id, next);
   }
 
-  void _toggleSave(WidgetRef ref) {
+  void _toggleSave(WidgetRef ref, BuildContext context) {
+    final wasSaved = event.isSaved;
     ref.read(eventRepositoryProvider).toggleSaved(event.id);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(wasSaved ? 'Removed from saved' : 'Saved'),
+      ),
+    );
   }
 
   RsvpStatus _nextStatus(RsvpStatus status) {

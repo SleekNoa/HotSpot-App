@@ -67,6 +67,14 @@ class EventDetailScreen extends ConsumerWidget {
                   ref
                       .read(eventRepositoryProvider)
                       .toggleSaved(latestEvent.id);
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        latestEvent.isSaved ? 'Removed from saved' : 'Saved',
+                      ),
+                    ),
+                  );
                 },
               ),
               IconButton(
@@ -80,7 +88,9 @@ class EventDetailScreen extends ConsumerWidget {
                       size: 18, color: Color(0xFF111827)),
                 ),
                 onPressed: () {
-                  // TODO: share functionality
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Share coming soon')),
+                  );
                 },
               ),
               const SizedBox(width: 4),

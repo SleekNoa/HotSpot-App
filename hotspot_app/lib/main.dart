@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/home_screen.dart';
 import 'screens/calendar_screen.dart';
+import 'screens/alerts_screen.dart';
 import 'screens/profile_screen.dart';
 
 void main() {
@@ -32,6 +33,10 @@ class HotSpotApp extends StatelessWidget {
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
+  static _MainNavigationState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_MainNavigationState>();
+  }
+
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
@@ -42,6 +47,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     HomeScreen(),
     CalendarScreen(),
+    AlertsScreen(),
     ProfileScreen(),
   ];
 
@@ -69,6 +75,11 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Calendar',
           ),
           NavigationDestination(
+            icon: Icon(Icons.notifications_none),
+            selectedIcon: Icon(Icons.notifications),
+            label: 'Alerts',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
@@ -76,5 +87,10 @@ class _MainNavigationState extends State<MainNavigation> {
         ],
       ),
     );
+  }
+
+  void setTab(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
   }
 }

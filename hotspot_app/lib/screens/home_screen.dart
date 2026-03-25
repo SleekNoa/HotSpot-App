@@ -18,6 +18,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _selectedFilter = 'For You';
+  String _locationLabel = 'Marion, Iowa - 5 mi';
+  final ScrollController _listController = ScrollController();
 
   final List<String> _filters = [
     'For You',
@@ -57,6 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTopBar(),
+            _buildFindWhatsHot(),
             _buildFilterRow(),
             Expanded(
               child: _buildEventsBody(eventsAsync),
@@ -111,7 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Expanded(
             child: GestureDetector(
               onTap: () {
-                // TODO: location picker
+                _openLocationPicker();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -126,10 +129,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const Icon(Icons.location_on,
                         size: 13, color: Color(0xFF2563EB)),
                     const SizedBox(width: 4),
-                    const Flexible(
+                    Flexible(
                       child: Text(
-                        'Marion, Iowa - 5 mi',
-                        style: TextStyle(
+                        _locationLabel,
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF374151),
@@ -150,10 +153,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: const Icon(Icons.search, size: 24),
             color: const Color(0xFF374151),
             onPressed: () {
-              // TODO: search screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Search coming soon')),
+              );
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFindWhatsHot() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _onFindWhatsHot,
+          icon: const Icon(Icons.local_fire_department),
+          label: const Text(
+            'Find What\'s Hot!',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -221,6 +251,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         await Future.delayed(const Duration(milliseconds: 800));
       },
       child: ListView.builder(
+        controller: _listController,
         padding: const EdgeInsets.only(top: 8, bottom: 24),
         itemCount: events.length,
         itemBuilder: (context, index) {
@@ -239,5 +270,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
       ),
     );
+  }
+
+  void _onFindWhatsHot() {
+    setState(() => _selectedFilter = 'For You');
+    if (_listController.hasClients) {
+      _listController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _openLocationPicker() {
+    final options = [
+      'Marion, Iowa - 5 mi',
+      'Cedar Rapids, Iowa - 5 mi',
+      'Iowa City, Iowa - 10 mi',
+      'Ames, Iowa - 15 mi',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            const ListTile(
+              title: Text(
+                'Select location',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            ...options.map(
+              (option) => ListTile(
+                title: Text(option),
+                onTap: () {
+                  setState(() => _locationLabel = option);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _listController.dispose();
+    super.dispose();
   }
 }
