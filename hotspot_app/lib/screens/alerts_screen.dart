@@ -21,8 +21,15 @@ class AlertItem {
   });
 }
 
-class AlertsScreen extends StatelessWidget {
+class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
+
+  @override
+  State<AlertsScreen> createState() => _AlertsScreenState();
+}
+
+class _AlertsScreenState extends State<AlertsScreen> {
+  final Set<String> _readIds = {};
 
   @override
   Widget build(BuildContext context) {
@@ -43,9 +50,9 @@ class AlertsScreen extends StatelessWidget {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildAlertList(alerts),
-                    _buildAlertList(connectionAlerts),
-                    _buildAlertList(eventAlerts),
+                    _buildAlertList(context, alerts),
+                    _buildAlertList(context, connectionAlerts),
+                    _buildAlertList(context, eventAlerts),
                   ],
                 ),
               ),
@@ -125,7 +132,7 @@ class AlertsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAlertList(List<AlertItem> items) {
+  Widget _buildAlertList(BuildContext context, List<AlertItem> items) {
     if (items.isEmpty) {
       return Center(
         child: Text(
@@ -139,18 +146,19 @@ class AlertsScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _alertCard(items[index]),
+      itemBuilder: (context, index) => _alertCard(context, items[index]),
     );
   }
 
-  Widget _alertCard(AlertItem item) {
+  Widget _alertCard(BuildContext context, AlertItem item) {
     final isConnection = item.type == AlertType.connection;
     final accent = isConnection ? const Color(0xFF2563EB) : const Color(0xFF10B981);
+    final isRead = _readIds.contains(item.id);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isRead ? const Color(0xFFF3F4F6) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withOpacity(0.25)),
         boxShadow: [
@@ -198,6 +206,12 @@ class AlertsScreen extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: _buildActions(context, item),
+                ),
               ],
             ),
           ),
@@ -211,6 +225,75 @@ class AlertsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  List<Widget> _buildActions(BuildContext context, AlertItem item) {
+    if (item.type == AlertType.connection) {
+      return [
+        _actionButton(
+          label: 'Accept',
+          color: const Color(0xFF2563EB),
+          onTap: () => _markRead(context, item, 'Connection accepted'),
+        ),
+        _actionButton(
+          label: 'Decline',
+          color: Colors.grey.shade600,
+          outlined: true,
+          onTap: () => _markRead(context, item, 'Connection declined'),
+        ),
+      ];
+    }
+
+    return [
+      _actionButton(
+        label: 'Going',
+        color: const Color(0xFF10B981),
+        onTap: () => _markRead(context, item, 'RSVP set to going'),
+      ),
+      _actionButton(
+        label: 'Dismiss',
+        color: Colors.grey.shade600,
+        outlined: true,
+        onTap: () => _markRead(context, item, 'Alert dismissed'),
+      ),
+    ];
+  }
+
+  Widget _actionButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool outlined = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: outlined ? Colors.transparent : color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.6)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: outlined ? color : color,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _markRead(BuildContext context, AlertItem item, String message) {
+    if (!_readIds.contains(item.id)) {
+      setState(() => _readIds.add(item.id));
+    }
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 

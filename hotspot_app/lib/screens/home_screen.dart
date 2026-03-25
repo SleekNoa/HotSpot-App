@@ -8,6 +8,7 @@ import '../models/event.dart';
 import '../providers/event_providers.dart';
 import '../widgets/event_card.dart';
 import 'event_detail_screen.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -153,8 +154,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: const Icon(Icons.search, size: 24),
             color: const Color(0xFF374151),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search coming soon')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SearchScreen(),
+                ),
               );
             },
           ),

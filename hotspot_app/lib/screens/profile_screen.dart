@@ -4,8 +4,31 @@
 
 import 'package:flutter/material.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String _name = 'Noah M.';
+  String _location = 'Cedar Rapids, Iowa';
+  String _bio = 'Music lover & weekend adventurer';
+  final List<String> _allInterests = const [
+    'Live Music',
+    'Outdoors',
+    'Food',
+    'Community',
+    'Art',
+    'Sports',
+  ];
+  final Set<String> _interests = {
+    'Live Music',
+    'Outdoors',
+    'Food',
+    'Community',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +39,9 @@ class ProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 40),
           children: [
             _buildTopBar(context),
-            _buildProfileHeader(),
+            _buildProfileHeader(
+              onEdit: () => _openEditSheet(context),
+            ),
             _buildStatsRow(),
             _buildQuickLinks(context),
             _buildTagsSection(),
@@ -70,7 +95,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader({required VoidCallback onEdit}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       child: Row(
@@ -108,8 +133,8 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'Noah M.',
+                    Text(
+                      _name,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -142,7 +167,7 @@ class ProfileScreen extends StatelessWidget {
                         size: 13, color: Colors.grey.shade500),
                     const SizedBox(width: 3),
                     Text(
-                      'Cedar Rapids, Iowa',
+                      _location,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade500,
@@ -151,8 +176,8 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Music lover & weekend adventurer',
+                Text(
+                  _bio,
                   style: TextStyle(
                     fontSize: 13,
                     color: Color(0xFF374151),
@@ -166,9 +191,7 @@ class ProfileScreen extends StatelessWidget {
           // Edit button
           IconButton(
             icon: Icon(Icons.edit_outlined, color: Colors.grey.shade500),
-            onPressed: () {
-              // Handled by caller to show feedback
-            },
+            onPressed: onEdit,
           ),
         ],
       ),
@@ -304,8 +327,6 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildTagsSection() {
-    final tags = ['Live Music', 'Outdoors', 'Food', 'Community'];
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
       child: Column(
@@ -323,7 +344,7 @@ class ProfileScreen extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: tags
+            children: _interests
                 .map(
                   (tag) => Container(
                     padding: const EdgeInsets.symmetric(
@@ -485,6 +506,143 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _openEditSheet(BuildContext context) async {
+    final nameController = TextEditingController(text: _name);
+    final locationController = TextEditingController(text: _location);
+    final bioController = TextEditingController(text: _bio);
+    final workingInterests = Set<String>.from(_interests);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Edit Profile',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bioController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Bio',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Interests',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _allInterests.map((interest) {
+                    final selected = workingInterests.contains(interest);
+                    return GestureDetector(
+                      onTap: () {
+                        if (selected) {
+                          workingInterests.remove(interest);
+                        } else {
+                          workingInterests.add(interest);
+                        }
+                        setState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF2563EB).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          interest,
+                          style: TextStyle(
+                            color: selected ? Colors.white : const Color(0xFF2563EB),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _name = nameController.text.trim().isEmpty
+                            ? _name
+                            : nameController.text.trim();
+                        _location = locationController.text.trim().isEmpty
+                            ? _location
+                            : locationController.text.trim();
+                        _bio = bioController.text.trim().isEmpty
+                            ? _bio
+                            : bioController.text.trim();
+                        _interests
+                          ..clear()
+                          ..addAll(workingInterests);
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

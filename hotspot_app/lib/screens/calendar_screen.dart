@@ -21,6 +21,9 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  String _selectedSegment = 'All';
+
+  final List<String> _segments = ['All', 'Going', 'Interested', 'Saved'];
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +41,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 data: (events) {
                   final rsvpdEvents = _rsvpdEvents(events);
                   final eventsByDay = _groupEventsByDay(rsvpdEvents);
-                  final filteredEvents = _filteredEvents(rsvpdEvents);
+                  final filteredEvents = _filteredEvents(events, rsvpdEvents);
                   return Column(
                     children: [
                       _buildCalendar(eventsByDay),
+                      _buildSegmentRow(),
                       const SizedBox(height: 8),
                       Expanded(
                         child: filteredEvents.isEmpty
@@ -73,16 +77,32 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return events.where((e) => e.rsvpStatus != RsvpStatus.none).toList();
   }
 
-  List<Event> _filteredEvents(List<Event> events) {
+  List<Event> _filteredEvents(List<Event> allEvents, List<Event> rsvpdEvents) {
+    List<Event> base;
+    switch (_selectedSegment) {
+      case 'Going':
+        base = allEvents.where((e) => e.rsvpStatus == RsvpStatus.going).toList();
+        break;
+      case 'Interested':
+        base = allEvents
+            .where((e) => e.rsvpStatus == RsvpStatus.interested)
+            .toList();
+        break;
+      case 'Saved':
+        base = allEvents.where((e) => e.isSaved).toList();
+        break;
+      default:
+        base = rsvpdEvents;
+    }
+
     if (_selectedDay == null) {
-      final sorted = List<Event>.from(events);
+      final sorted = List<Event>.from(base);
       sorted.sort((a, b) => a.dateTime.compareTo(b.dateTime));
       return sorted;
     }
 
-    final filtered = events
-        .where((e) => isSameDay(e.dateTime, _selectedDay))
-        .toList();
+    final filtered =
+        base.where((e) => isSameDay(e.dateTime, _selectedDay)).toList();
     filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return filtered;
   }
@@ -278,6 +298,47 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
+  Widget _buildSegmentRow() {
+    return SizedBox(
+      height: 42,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _segments.length,
+        itemBuilder: (context, index) {
+          final segment = _segments[index];
+          final isSelected = _selectedSegment == segment;
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedSegment = segment),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF2563EB)
+                      : Colors.grey.shade300,
+                ),
+              ),
+              child: Text(
+                segment,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -298,7 +359,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             const SizedBox(height: 8),
             Text(
               _selectedDay == null
-                  ? 'RSVP to events on the Discover tab and they will show up here.'
+                  ? _selectedSegment == 'Saved'
+                      ? 'Save events to see them here.'
+                      : 'RSVP to events on the Discover tab and they will show up here.'
                   : 'No events on this day.',
               textAlign: TextAlign.center,
               style: TextStyle(
