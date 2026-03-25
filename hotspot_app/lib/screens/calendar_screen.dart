@@ -1,19 +1,28 @@
 ﻿// lib/screens/calendar_screen.dart
-// Shows events the user has RSVP'd to (Going or Interested).
+// Calendar view with highlighted event days and RSVP list.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import '../models/event.dart';
 import '../providers/event_providers.dart';
 import '../widgets/event_card.dart';
 import 'event_detail_screen.dart';
 
-class CalendarScreen extends ConsumerWidget {
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+
+  @override
+  Widget build(BuildContext context) {
     final eventsAsync = ref.watch(eventsProvider);
 
     return Scaffold(
@@ -27,9 +36,19 @@ class CalendarScreen extends ConsumerWidget {
               child: eventsAsync.when(
                 data: (events) {
                   final rsvpdEvents = _rsvpdEvents(events);
-                  return rsvpdEvents.isEmpty
-                      ? _buildEmptyState()
-                      : _buildEventList(context, rsvpdEvents);
+                  final eventsByDay = _groupEventsByDay(rsvpdEvents);
+                  final filteredEvents = _filteredEvents(rsvpdEvents);
+                  return Column(
+                    children: [
+                      _buildCalendar(eventsByDay),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: filteredEvents.isEmpty
+                            ? _buildEmptyState()
+                            : _buildEventList(filteredEvents),
+                      ),
+                    ],
+                  );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Center(
@@ -48,6 +67,29 @@ class CalendarScreen extends ConsumerWidget {
 
   List<Event> _rsvpdEvents(List<Event> events) {
     return events.where((e) => e.rsvpStatus != RsvpStatus.none).toList();
+  }
+
+  List<Event> _filteredEvents(List<Event> events) {
+    if (_selectedDay == null) {
+      final sorted = List<Event>.from(events);
+      sorted.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      return sorted;
+    }
+
+    final filtered = events
+        .where((e) => isSameDay(e.dateTime, _selectedDay))
+        .toList();
+    filtered.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    return filtered;
+  }
+
+  Map<DateTime, List<Event>> _groupEventsByDay(List<Event> events) {
+    final map = <DateTime, List<Event>>{};
+    for (final event in events) {
+      final key = DateTime(event.dateTime.year, event.dateTime.month, event.dateTime.day);
+      map.putIfAbsent(key, () => []).add(event);
+    }
+    return map;
   }
 
   Widget _buildTopBar(AsyncValue<List<Event>> eventsAsync) {
@@ -114,6 +156,124 @@ class CalendarScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildCalendar(Map<DateTime, List<Event>> eventsByDay) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TableCalendar<Event>(
+        firstDay: DateTime(DateTime.now().year - 2, 1, 1),
+        lastDay: DateTime(DateTime.now().year + 2, 12, 31),
+        focusedDay: _focusedDay,
+        startingDayOfWeek: StartingDayOfWeek.sunday,
+        headerStyle: HeaderStyle(
+          titleCentered: true,
+          formatButtonVisible: false,
+          leftChevronIcon: const Icon(Icons.chevron_left),
+          rightChevronIcon: const Icon(Icons.chevron_right),
+          titleTextStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekdayStyle: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+          weekendStyle: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+        ),
+        calendarStyle: CalendarStyle(
+          outsideDaysVisible: false,
+          todayDecoration: BoxDecoration(
+            color: const Color(0xFF2563EB).withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          selectedDecoration: BoxDecoration(
+            color: const Color(0xFF2563EB),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          selectedTextStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        selectedDayPredicate: (day) => _selectedDay != null && isSameDay(_selectedDay, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          setState(() {
+            final hasEvents = eventsByDay[DateTime(selectedDay.year, selectedDay.month, selectedDay.day)]?.isNotEmpty ?? false;
+            _selectedDay = hasEvents ? selectedDay : null;
+            _focusedDay = focusedDay;
+          });
+        },
+        onPageChanged: (focusedDay) {
+          _focusedDay = focusedDay;
+          if (_selectedDay != null && !_isSameMonth(_selectedDay, focusedDay)) {
+            setState(() {
+              _selectedDay = null;
+            });
+          }
+        },
+        onHeaderTapped: (focusedDay) async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: focusedDay,
+            firstDate: DateTime(DateTime.now().year - 2, 1, 1),
+            lastDate: DateTime(DateTime.now().year + 2, 12, 31),
+          );
+          if (picked != null) {
+            setState(() {
+              _focusedDay = picked;
+              _selectedDay = null;
+            });
+          }
+        },
+        eventLoader: (day) {
+          final key = DateTime(day.year, day.month, day.day);
+          return eventsByDay[key] ?? [];
+        },
+        calendarBuilders: CalendarBuilders(
+          defaultBuilder: (context, day, focusedDay) {
+            final key = DateTime(day.year, day.month, day.day);
+            final hasEvents = eventsByDay[key]?.isNotEmpty ?? false;
+            if (!hasEvents) return null;
+            return Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '${day.day}',
+                style: const TextStyle(
+                  color: Color(0xFF2563EB),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            );
+          },
+          todayBuilder: (context, day, focusedDay) {
+            final key = DateTime(day.year, day.month, day.day);
+            final hasEvents = eventsByDay[key]?.isNotEmpty ?? false;
+            return Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: hasEvents
+                    ? const Color(0xFF2563EB).withOpacity(0.2)
+                    : const Color(0xFF2563EB).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2563EB), width: 1),
+              ),
+              child: Text(
+                '${day.day}',
+                style: const TextStyle(
+                  color: Color(0xFF2563EB),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -121,8 +281,7 @@ class CalendarScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 56, color: Colors.grey.shade300),
+            Icon(Icons.calendar_today_outlined, size: 56, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             const Text(
               'No upcoming events',
@@ -134,7 +293,9 @@ class CalendarScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'RSVP to events on the Discover tab and they will show up here.',
+              _selectedDay == null
+                  ? 'RSVP to events on the Discover tab and they will show up here.'
+                  : 'No events on this day.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -164,66 +325,29 @@ class CalendarScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEventList(BuildContext context, List<Event> events) {
-    final goingEvents =
-        events.where((e) => e.rsvpStatus == RsvpStatus.going).toList();
-    final interestedEvents =
-        events.where((e) => e.rsvpStatus == RsvpStatus.interested).toList();
-
+  Widget _buildEventList(List<Event> events) {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        if (goingEvents.isNotEmpty) ...[
-          _sectionHeader('Going', const Color(0xFF2563EB)),
-          ...goingEvents.map((e) => EventCard(
-                event: e,
-                onTap: () => _openDetail(context, e),
-              )),
-        ],
-        if (interestedEvents.isNotEmpty) ...[
-          _sectionHeader('Interested', const Color(0xFFF59E0B)),
-          ...interestedEvents.map((e) => EventCard(
-                event: e,
-                onTap: () => _openDetail(context, e),
-              )),
-        ],
+        ...events.map((e) => EventCard(
+              event: e,
+              onTap: () => _openDetail(e),
+            )),
       ],
     );
   }
 
-  Widget _sectionHeader(String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 16,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openDetail(BuildContext context, Event event) {
+  void _openDetail(Event event) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EventDetailScreen(event: event),
       ),
     );
+  }
+
+  bool _isSameMonth(DateTime? a, DateTime b) {
+    if (a == null) return false;
+    return a.year == b.year && a.month == b.month;
   }
 }
